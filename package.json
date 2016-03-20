@@ -1,0 +1,37 @@
+{
+  "name": "nci-ssh-node",
+  "version": "0.9.0-alpha",
+  "description": "SSH node for nci",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "mocha --bail --reporter=spec"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/node-ci/nci-ssh-node.git"
+  },
+  "keywords": [
+    "nciplugin",
+    "ssh",
+    "remote",
+    "executor"
+  ],
+  "author": "Oleg Korobenko <oleg.korobenko@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/node-ci/nci-ssh-node/issues"
+  },
+  "homepage": "https://github.com/node-ci/nci-ssh-node",
+  "dependencies": {
+    "twostep": "0.4.1",
+    "underscore": "1.8.3"
+  },
+  "peerDependencies": {
+    "nci": "0.10.x"
+  },
+  "devDependencies": {
+    "expect.js": "0.3.1",
+    "mocha": "2.0.1",
+    "sinon": "1.17.2"
+  }
+}
