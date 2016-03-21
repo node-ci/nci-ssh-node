@@ -185,12 +185,21 @@ describe('ssh shell command', function() {
 			expect(params.args[3]).equal('IdentitiesOnly=yes');
 		});
 
+		it('should always add batch mode to command', function() {
+			var command = new Command({});
+			command.run({cmd: 'beep', args: ['1', '2']});
+
+			var params = runSpy.getCall(0).args[0];
+			expect(params.args[4]).equal('-o');
+			expect(params.args[5]).equal('BatchMode=yes');
+		});
+
 		it('should always disable pseudo-tty allocation', function() {
 			var command = new Command({});
 			command.run({cmd: 'beep', args: ['1', '2']});
 
 			var params = runSpy.getCall(0).args[0];
-			expect(params.args[4]).equal('-T');
+			expect(params.args[6]).equal('-T');
 		});
 
 		it('should optionally add port to command', function() {
@@ -199,8 +208,8 @@ describe('ssh shell command', function() {
 			command.run({cmd: 'beep', args: ['1', '2']});
 
 			var params = runSpy.getCall(0).args[0];
-			expect(params.args[5]).equal('-p');
-			expect(params.args[6]).equal(1122);
+			expect(params.args[7]).equal('-p');
+			expect(params.args[8]).equal(1122);
 		});
 
 		it('should optionally add arbitrary args to command', function() {
@@ -209,8 +218,8 @@ describe('ssh shell command', function() {
 			command.run({cmd: 'beep', args: ['1', '2']});
 
 			var params = runSpy.getCall(0).args[0];
-			expect(params.args[5]).equal('-Y');
-			expect(params.args[6]).equal('-q');
+			expect(params.args[7]).equal('-Y');
+			expect(params.args[8]).equal('-q');
 		});
 
 		it('should always add user and host to command', function() {
@@ -220,7 +229,7 @@ describe('ssh shell command', function() {
 			command.run({cmd: 'beep', args: ['1', '2']});
 
 			var params = runSpy.getCall(0).args[0];
-			expect(params.args[5]).equal('nci@192.168.0.1');
+			expect(params.args[7]).equal('nci@192.168.0.1');
 		});
 
 		it('should run remote command in a shell', function() {
@@ -292,6 +301,7 @@ describe('ssh shell command', function() {
 			expect(params.args).eql([
 				'-i', '~/.ssh/id_rsa_01',
 				'-o', 'IdentitiesOnly=yes',
+				'-o', 'BatchMode=yes',
 				'-T',
 				'nci@192.168.0.1',
 				'/bin/sh -c \'beep "1" "2"\''
