@@ -3,7 +3,8 @@
 var expect = require('expect.js'),
 	sinon = require('sinon'),
 	getExecutorConstructor = require('../lib/executor'),
-	path = require('path');
+	path = require('path'),
+	_ = require('underscore');
 
 describe('ssh executor', function() {
 
@@ -11,8 +12,9 @@ describe('ssh executor', function() {
 	}
 
 	var app = {lib: {
-		command: {SpawnCommand: function() {}},
-		executor: {}
+		command: {},
+		executor: {},
+		scm: {}
 	}};
 
 	describe('constructor', function() {
@@ -22,6 +24,7 @@ describe('ssh executor', function() {
 			app.lib.executor.BaseExecutor = sinon.spy(function(params) {
 				this.project = params.project;
 			});
+			app.lib.command.SpawnCommand = _.noop;
 			parentConstructorSpy = app.lib.executor.BaseExecutor;
 
 			Executor = getExecutorConstructor(app);
@@ -29,6 +32,7 @@ describe('ssh executor', function() {
 
 		after(function() {
 			delete app.lib.command.BaseExecutor;
+			delete app.lib.command.SpawnCommand;
 		});
 
 		it('should call parent constructor with params', function() {
@@ -72,4 +76,42 @@ describe('ssh executor', function() {
 		});
 	});
 
+	describe('_createScm method', function() {
+		var Executor, executor = {}, params = {param1: 'val1'};
+
+		before(function() {
+			app.lib.scm.createScm = sinon.spy();
+			app.lib.command.SpawnCommand = sinon.spy();
+
+			Executor = getExecutorConstructor(app);
+			executor._createScm = Executor.prototype._createScm;
+			executor.options = {opt1: 'opt1'};
+
+			executor._createScm(params);
+		});
+
+		after(function() {
+			delete app.lib.scm.createScm;
+			delete app.lib.command.SpawnCommand;
+		});
+
+		it('should call lib createScm once', function() {
+			expect(app.lib.scm.createScm.calledOnce).equal(true);
+		});
+
+		it('should create which calls spawn command constructor', function() {
+			expect(app.lib.command.SpawnCommand.calledOnce).equal(true);
+		});
+
+		it('should create command from options and params', function() {
+			var args = app.lib.command.SpawnCommand.getCall(0).args;
+			expect(args[0]).eql(_({}).extend(executor.options, params));
+		});
+
+		it('should call lib createScm with params and command', function() {
+			var args = app.lib.scm.createScm.getCall(0).args;
+			expect(_(args[0]).omit('command')).eql(params);
+			expect(args[0].command).a(app.lib.command.SpawnCommand);
+		});
+	});
 });
