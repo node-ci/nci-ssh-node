@@ -77,17 +77,19 @@ describe('ssh executor', function() {
 	});
 
 	describe('_createScm method', function() {
-		var Executor, executor = {}, params = {param1: 'val1'};
+		var Executor, executor = {}, params = {someParam: 'someVal'}, result;
 
 		before(function() {
-			app.lib.scm.createScm = sinon.spy();
+			app.lib.scm.createScm = sinon.spy(function(params) {
+				return 'scm';
+			});
 			app.lib.command.SpawnCommand = sinon.spy();
 
 			Executor = getExecutorConstructor(app);
 			executor._createScm = Executor.prototype._createScm;
 			executor.options = {opt1: 'opt1'};
 
-			executor._createScm(params);
+			result = executor._createScm(params);
 		});
 
 		after(function() {
@@ -112,6 +114,41 @@ describe('ssh executor', function() {
 			var args = app.lib.scm.createScm.getCall(0).args;
 			expect(_(args[0]).omit('command')).eql(params);
 			expect(args[0].command).a(app.lib.command.SpawnCommand);
+		});
+
+		it('should return result of create scm command', function() {
+			expect(result).equal('scm');
+		});
+	});
+
+	describe('_createCommand method', function() {
+		var Executor, executor = {}, params = {someParam: 'someVal'}, result;
+
+		before(function() {
+			app.lib.command.SpawnCommand = sinon.spy();
+
+			Executor = getExecutorConstructor(app);
+			executor._createCommand = Executor.prototype._createCommand;
+			executor.options = {someOpt: 'someOptVal'};
+
+			result = executor._createCommand(params);
+		});
+
+		after(function() {
+			delete app.lib.command.SpawnCommand;
+		});
+
+		it('should create command which calls spawn constructor', function() {
+			expect(app.lib.command.SpawnCommand.calledOnce).equal(true);
+		});
+
+		it('should create command from options and params', function() {
+			var args = app.lib.command.SpawnCommand.getCall(0).args;
+			expect(args[0]).eql(_({}).extend(executor.options, params));
+		});
+
+		it('should return instance of command', function() {
+			expect(result).a(app.lib.command.SpawnCommand);
 		});
 	});
 });
