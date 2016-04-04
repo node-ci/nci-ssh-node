@@ -4,7 +4,8 @@ var expect = require('expect.js'),
 	sinon = require('sinon'),
 	getExecutorConstructor = require('../lib/executor'),
 	path = require('path'),
-	_ = require('underscore');
+	_ = require('underscore'),
+	proxyquire = require('proxyquire');
 
 describe('ssh executor', function() {
 
@@ -151,4 +152,47 @@ describe('ssh executor', function() {
 			expect(result).a(app.lib.command.SpawnCommand);
 		});
 	});
+
+	describe('_isCloned method', function() {
+		var Executor, executor = {}, params = {someParam: 'someVal'}, Command;
+
+		beforeEach(function() {
+			app.lib.command.SpawnCommand = _.noop;
+
+			Command = sinon.spy(require('../lib/command')(app));
+
+			sinon.spy(Command.prototype, 'run');
+
+			var getExecutorConstructor = proxyquire('../lib/executor', {
+				'./command': function(app) {
+					return Command;
+				}
+			});
+			Executor = getExecutorConstructor(app);
+			executor._isCloned = Executor.prototype._isCloned;
+			executor.options = {someOpt: 'someOptVal'};
+			executor.cwd = '/var/tmp/nci/data/projects';
+		});
+
+		after(function() {
+			delete app.lib.command.SpawnCommand;
+		});
+
+		it('should create and run check dir command', function(done) {
+			executor._isCloned(function() {
+				expect(Command.calledOnce).equal(true);
+
+				var args = Command.getCall(0).args;
+				expect(args[0]).eql(
+					_({collectOut: true}).defaults(executor.options)
+				);
+
+				args = Command.prototype.run.getCall(0).args;
+				expect(args[0]).eql({cmd: 'test -e ' + executor.cwd + '; echo $?'});
+
+				done();
+			});
+		});
+	});
+
 });
