@@ -161,8 +161,6 @@ describe('ssh executor', function() {
 
 			Command = sinon.spy(require('../lib/command')(app));
 
-			sinon.spy(Command.prototype, 'run');
-
 			var getExecutorConstructor = proxyquire('../lib/executor', {
 				'./command': function(app) {
 					return Command;
@@ -178,8 +176,13 @@ describe('ssh executor', function() {
 			delete app.lib.command.SpawnCommand;
 		});
 
-		it('should create and run check dir command', function(done) {
-			executor._isCloned(function() {
+		it('should check dir exists', function(done) {
+			sinon.stub(Command.prototype, 'run')
+				.onCall(0).callsArgWithAsync(1, null, '0')
+				.onCall(1).callsArgWithAsync(1, null);
+
+			executor._isCloned(function(err) {
+				expect(err).not.ok();
 				expect(Command.calledOnce).equal(true);
 
 				var args = Command.getCall(0).args;
@@ -188,7 +191,35 @@ describe('ssh executor', function() {
 				);
 
 				args = Command.prototype.run.getCall(0).args;
-				expect(args[0]).eql({cmd: 'test -e ' + executor.cwd + '; echo $?'});
+				expect(args[0]).eql({
+					cmd: 'test -e "' + executor.cwd + '"; echo $?'
+				});
+
+				Command.prototype.run.restore();
+
+				done();
+			});
+		});
+
+		it('should create dir when doesnt`t exist', function(done) {
+			sinon.stub(Command.prototype, 'run')
+				.onCall(0).callsArgWithAsync(1, null, '1')
+				.onCall(1).callsArgWithAsync(1, null);
+
+			executor._isCloned(function(err) {
+				expect(err).not.ok();
+
+				expect(Command.calledTwice).equal(true);
+
+				var args = Command.getCall(1).args;
+				expect(args[0]).eql(executor.options);
+
+				args = Command.prototype.run.getCall(1).args;
+				expect(args[0]).eql({
+					cmd: 'mkdir -p "' + path.dirname(executor.cwd) + '"'
+				});
+
+				Command.prototype.run.restore();
 
 				done();
 			});
