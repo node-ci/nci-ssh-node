@@ -2,27 +2,50 @@
 
 var expect = require('expect.js'),
 	sinon = require('sinon'),
+	_ = require('underscore'),
 	getCommandConstructor = require('../lib/command');
 
 describe('ssh shell command', function() {
 
-	function SpawnCommand() {
-	}
+	var app = {lib: {command: {SpawnCommand: _.noop}}};
+	
+	var SpawnCommand = app.lib.command.SpawnCommand;
 
-	var app = {lib: {command: {}}};
+	describe('module', function() {
+		it('should export function', function() {
+			expect(getCommandConstructor).a(Function);
+		});
+
+		it('should export func which accepts single arg', function() {
+			expect(getCommandConstructor.length).equal(1);
+		});
+
+		var Constructor;
+
+		it('should export func which called without errors', function() {
+			Constructor = getCommandConstructor(app);
+		});
+
+		it('should export func which returns command constructor', function() {
+			expect(Constructor.super_).equal(app.lib.command.SpawnCommand);
+		});
+	});
 
 	describe('constructor', function() {
 		var Command, parentConstructorSpy;
 
+		before(function() {
+			parentConstructorSpy = sinon.spy(app.lib.command, 'SpawnCommand');
+		});
+
 		beforeEach(function() {
-			app.lib.command.SpawnCommand = sinon.spy();
-			parentConstructorSpy = app.lib.command.SpawnCommand;
+			parentConstructorSpy.reset();
 
 			Command = getCommandConstructor(app);
 		});
 
 		after(function() {
-			delete app.lib.command.SpawnCommand;
+			app.lib.command.SpawnCommand.restore();
 		});
 
 		it('should call parent constructor', function() {
@@ -49,23 +72,19 @@ describe('ssh shell command', function() {
 	});
 
 	describe('set params', function() {
-		before(function() {
-			app.lib.command.SpawnCommand = SpawnCommand;
-		});
-
 		var Command, parentSetParamsSpy;
 
 		beforeEach(function() {
-			SpawnCommand.prototype.setParams = sinon.spy(function(params) {
+			SpawnCommand.prototype.setParams = function(params) {
 				if (params.cwd) this.cwd = params.cwd;
-			});
-			parentSetParamsSpy = SpawnCommand.prototype.setParams;
+			};
+
+			parentSetParamsSpy = sinon.spy(SpawnCommand.prototype, 'setParams');
 
 			Command = getCommandConstructor(app);
 		});
 
 		after(function() {
-			delete app.lib.command.SpawnCommand;
 			delete SpawnCommand.prototype.setParams;
 		});
 
@@ -128,21 +147,17 @@ describe('ssh shell command', function() {
 	});
 
 	describe('run method', function() {
-		before(function() {
-			app.lib.command.SpawnCommand = SpawnCommand;
-		});
-
-		after(function() {
-			delete app.lib.command.SpawnCommand;
-		});
-
 		var Command, runSpy;
 
 		beforeEach(function() {
-			SpawnCommand.prototype.run = sinon.spy(); 
+			SpawnCommand.prototype.run = sinon.spy();
 			runSpy = SpawnCommand.prototype.run;
 
 			Command = getCommandConstructor(app);
+		});
+
+		after(function() {
+			delete SpawnCommand.prototype.run;
 		});
 
 		it('should pass callback to parent run method', function() {

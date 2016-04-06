@@ -9,31 +9,68 @@ var expect = require('expect.js'),
 
 describe('ssh executor', function() {
 
-	function BaseExecutor() {
-	}
-
 	var app = {lib: {
-		command: {},
-		executor: {},
+		command: {SpawnCommand: _.noop},
+		executor: {BaseExecutor: _.noop},
 		scm: {}
 	}};
+
+	var makeExecutorConstructor = function(app, Command) {
+		var getConstructor = proxyquire('../lib/executor', {
+			'./command': function(app) {
+				return Command;
+			}
+		});
+
+		var Executor = getConstructor(app);
+
+		return Executor;
+	};
+
+	var makeCommandSpy = function(app) {
+		var Command = require('../lib/command')(app),
+			CommandSpy = sinon.spy(Command);
+
+		return CommandSpy;
+	};
+
+	describe('module', function() {
+		it('should export function', function() {
+			expect(getExecutorConstructor).a(Function);
+		});
+
+		it('should export funct which accepts single arg', function() {
+			expect(getExecutorConstructor.length).equal(1);
+		});
+
+		var Constructor;
+
+		it('should export func which called without errors', function() {
+			Constructor = getExecutorConstructor(app);
+		});
+
+		it('should export func which returns executor constructor', function() {
+			expect(Constructor.super_).equal(app.lib.executor.BaseExecutor);
+		});
+	});
 
 	describe('constructor', function() {
 		var Executor, parentConstructorSpy;
 
-		beforeEach(function() {
-			app.lib.executor.BaseExecutor = sinon.spy(function(params) {
-				this.project = params.project;
-			});
-			app.lib.command.SpawnCommand = _.noop;
-			parentConstructorSpy = app.lib.executor.BaseExecutor;
+		before(function() {
+			parentConstructorSpy = sinon.stub(
+				app.lib.executor,
+				'BaseExecutor',
+				function(params) {
+					this.project = params.project;
+				}
+			);
 
 			Executor = getExecutorConstructor(app);
 		});
 
 		after(function() {
-			delete app.lib.command.BaseExecutor;
-			delete app.lib.command.SpawnCommand;
+			delete app.lib.executor.BaseExecutor.restore();
 		});
 
 		it('should call parent constructor with params', function() {
@@ -77,64 +114,50 @@ describe('ssh executor', function() {
 		});
 	});
 
-	var makeExecutorConstructor = function(app, Command) {
-		var getConstructor = proxyquire('../lib/executor', {
-			'./command': function(app) {
-				return Command;
-			}
-		});
-
-		var Executor = getConstructor(app);
-
-		return Executor;
-	};
-
-	var makeCommandSpy = function(app) {
-		var Command = require('../lib/command')(app),
-			CommandSpy = sinon.spy(Command);
-
-		return CommandSpy;
-	};
-
 	describe('_createScm method', function() {
-		var Executor, executor = {}, params = {someParam: 'someVal'}, result;
+		var Executor, executor = {}, params = {someParam: 'someVal'}, CommandSpy,
+			createScmSpy;
 
 		before(function() {
-			app.lib.scm.createScm = sinon.spy(function(params) {
+			app.lib.scm.createScm = function(params) {
 				return 'scm';
-			});
-			app.lib.command.SpawnCommand = sinon.spy();
+			};
+			createScmSpy = sinon.spy(app.lib.scm, 'createScm');
 
-			Executor = getExecutorConstructor(app);
+			CommandSpy = makeCommandSpy(app);
+			Executor = makeExecutorConstructor(app, CommandSpy);
 
 			executor._createScm = Executor.prototype._createScm;
 			executor.options = {opt1: 'opt1'};
-
-			result = executor._createScm(params);
 		});
 
 		after(function() {
 			delete app.lib.scm.createScm;
-			delete app.lib.command.SpawnCommand;
+		});
+
+		var result;
+
+		it('should be called without error', function() {
+			result = executor._createScm(params);
 		});
 
 		it('should call lib createScm once', function() {
-			expect(app.lib.scm.createScm.calledOnce).equal(true);
+			expect(createScmSpy.calledOnce).equal(true);
 		});
 
-		it('should create which calls spawn command constructor', function() {
-			expect(app.lib.command.SpawnCommand.calledOnce).equal(true);
+		it('should create command', function() {
+			expect(CommandSpy.calledOnce).equal(true);
 		});
 
-		it('should create command from options and params', function() {
-			var args = app.lib.command.SpawnCommand.getCall(0).args;
+		it('should create command with options and params', function() {
+			var args = CommandSpy.getCall(0).args;
 			expect(args[0]).eql(_({}).extend(executor.options, params));
 		});
 
 		it('should call lib createScm with params and command', function() {
-			var args = app.lib.scm.createScm.getCall(0).args;
+			var args = createScmSpy.getCall(0).args;
 			expect(_(args[0]).omit('command')).eql(params);
-			expect(args[0].command).a(app.lib.command.SpawnCommand);
+			expect(args[0].command).a(CommandSpy);
 		});
 
 		it('should return result of create scm command', function() {
@@ -146,17 +169,11 @@ describe('ssh executor', function() {
 		var Executor, executor = {}, params = {someParam: 'someVal'}, CommandSpy;
 
 		before(function() {
-			app.lib.command.SpawnCommand = _.noop;
-
 			CommandSpy = makeCommandSpy(app);
 			Executor = makeExecutorConstructor(app, CommandSpy);
 
 			executor._createCommand = Executor.prototype._createCommand;
 			executor.options = {someOpt: 'someOptVal'};
-		});
-
-		after(function() {
-			delete app.lib.command.SpawnCommand;
 		});
 
 		var result;
@@ -183,25 +200,12 @@ describe('ssh executor', function() {
 		var Executor, executor = {}, params = {someParam: 'someVal'}, CommandSpy;
 
 		beforeEach(function() {
-			app.lib.command.SpawnCommand = _.noop;
-
-			var Command = require('../lib/command')(app);
-			CommandSpy = sinon.spy(Command);
-
-			var getConstructor = proxyquire('../lib/executor', {
-				'./command': function(app) {
-					return CommandSpy;
-				}
-			});
-			Executor = getConstructor(app);
+			CommandSpy = makeCommandSpy(app);
+			Executor = makeExecutorConstructor(app, CommandSpy);
 
 			executor._isCloned = Executor.prototype._isCloned;
 			executor.options = {someOpt: 'someOptVal'};
 			executor.cwd = '/var/tmp/nci/data/projects';
-		});
-
-		after(function() {
-			delete app.lib.command.SpawnCommand;
 		});
 
 		it('should check dir exists', function(done) {
