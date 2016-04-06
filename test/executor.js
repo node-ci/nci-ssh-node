@@ -77,6 +77,25 @@ describe('ssh executor', function() {
 		});
 	});
 
+	var makeExecutorConstructor = function(app, Command) {
+		var getConstructor = proxyquire('../lib/executor', {
+			'./command': function(app) {
+				return Command;
+			}
+		});
+
+		var Executor = getConstructor(app);
+
+		return Executor;
+	};
+
+	var makeCommandSpy = function(app) {
+		var Command = require('../lib/command')(app),
+			CommandSpy = sinon.spy(Command);
+
+		return CommandSpy;
+	};
+
 	describe('_createScm method', function() {
 		var Executor, executor = {}, params = {someParam: 'someVal'}, result;
 
@@ -87,6 +106,7 @@ describe('ssh executor', function() {
 			app.lib.command.SpawnCommand = sinon.spy();
 
 			Executor = getExecutorConstructor(app);
+
 			executor._createScm = Executor.prototype._createScm;
 			executor.options = {opt1: 'opt1'};
 
@@ -123,50 +143,58 @@ describe('ssh executor', function() {
 	});
 
 	describe('_createCommand method', function() {
-		var Executor, executor = {}, params = {someParam: 'someVal'}, result;
+		var Executor, executor = {}, params = {someParam: 'someVal'}, CommandSpy;
 
 		before(function() {
-			app.lib.command.SpawnCommand = sinon.spy();
+			app.lib.command.SpawnCommand = _.noop;
 
-			Executor = getExecutorConstructor(app);
+			CommandSpy = makeCommandSpy(app);
+			Executor = makeExecutorConstructor(app, CommandSpy);
+
 			executor._createCommand = Executor.prototype._createCommand;
 			executor.options = {someOpt: 'someOptVal'};
-
-			result = executor._createCommand(params);
 		});
 
 		after(function() {
 			delete app.lib.command.SpawnCommand;
 		});
 
+		var result;
+
+		it('should be executed without error', function() {
+			result = executor._createCommand(params);
+		});
+
 		it('should create command which calls spawn constructor', function() {
-			expect(app.lib.command.SpawnCommand.calledOnce).equal(true);
+			expect(CommandSpy.calledOnce).equal(true);
 		});
 
 		it('should create command from options and params', function() {
-			var args = app.lib.command.SpawnCommand.getCall(0).args;
+			var args = CommandSpy.getCall(0).args;
 			expect(args[0]).eql(_({}).extend(executor.options, params));
 		});
 
 		it('should return instance of command', function() {
-			expect(result).a(app.lib.command.SpawnCommand);
+			expect(result).a(CommandSpy);
 		});
 	});
 
 	describe('_isCloned method', function() {
-		var Executor, executor = {}, params = {someParam: 'someVal'}, Command;
+		var Executor, executor = {}, params = {someParam: 'someVal'}, CommandSpy;
 
 		beforeEach(function() {
 			app.lib.command.SpawnCommand = _.noop;
 
-			Command = sinon.spy(require('../lib/command')(app));
+			var Command = require('../lib/command')(app);
+			CommandSpy = sinon.spy(Command);
 
-			var getExecutorConstructor = proxyquire('../lib/executor', {
+			var getConstructor = proxyquire('../lib/executor', {
 				'./command': function(app) {
-					return Command;
+					return CommandSpy;
 				}
 			});
-			Executor = getExecutorConstructor(app);
+			Executor = getConstructor(app);
+
 			executor._isCloned = Executor.prototype._isCloned;
 			executor.options = {someOpt: 'someOptVal'};
 			executor.cwd = '/var/tmp/nci/data/projects';
@@ -177,49 +205,49 @@ describe('ssh executor', function() {
 		});
 
 		it('should check dir exists', function(done) {
-			sinon.stub(Command.prototype, 'run')
+			sinon.stub(CommandSpy.prototype, 'run')
 				.onCall(0).callsArgWithAsync(1, null, '0')
 				.onCall(1).callsArgWithAsync(1, null);
 
 			executor._isCloned(function(err) {
 				expect(err).not.ok();
-				expect(Command.calledOnce).equal(true);
+				expect(CommandSpy.calledOnce).equal(true);
 
-				var args = Command.getCall(0).args;
+				var args = CommandSpy.getCall(0).args;
 				expect(args[0]).eql(
 					_({collectOut: true}).defaults(executor.options)
 				);
 
-				args = Command.prototype.run.getCall(0).args;
+				args = CommandSpy.prototype.run.getCall(0).args;
 				expect(args[0]).eql({
 					cmd: 'test -e "' + executor.cwd + '"; echo $?'
 				});
 
-				Command.prototype.run.restore();
+				CommandSpy.prototype.run.restore();
 
 				done();
 			});
 		});
 
 		it('should create dir when doesnt`t exist', function(done) {
-			sinon.stub(Command.prototype, 'run')
+			sinon.stub(CommandSpy.prototype, 'run')
 				.onCall(0).callsArgWithAsync(1, null, '1')
 				.onCall(1).callsArgWithAsync(1, null);
 
 			executor._isCloned(function(err) {
 				expect(err).not.ok();
 
-				expect(Command.calledTwice).equal(true);
+				expect(CommandSpy.calledTwice).equal(true);
 
-				var args = Command.getCall(1).args;
+				var args = CommandSpy.getCall(1).args;
 				expect(args[0]).eql(executor.options);
 
-				args = Command.prototype.run.getCall(1).args;
+				args = CommandSpy.prototype.run.getCall(1).args;
 				expect(args[0]).eql({
 					cmd: 'mkdir -p "' + path.dirname(executor.cwd) + '"'
 				});
 
-				Command.prototype.run.restore();
+				CommandSpy.prototype.run.restore();
 
 				done();
 			});
