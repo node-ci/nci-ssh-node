@@ -90,7 +90,7 @@ describe('ssh node', function() {
 		var result;
 
 		it('should be executed without error', function() {
-			result = node._createExecutor(project);
+			result = node._createExecutor({project: project});
 		});
 
 		it('should create executor', function() {
