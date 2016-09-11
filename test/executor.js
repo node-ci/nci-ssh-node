@@ -70,7 +70,7 @@ describe('ssh executor', function() {
 		});
 
 		after(function() {
-			delete app.lib.executor.BaseExecutor.restore();
+			app.lib.executor.BaseExecutor.restore();
 		});
 
 		it('should call parent constructor with params', function() {
