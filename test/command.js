@@ -147,10 +147,12 @@ describe('ssh shell command', function() {
 	});
 
 	describe('run method', function() {
-		var Command, runSpy;
+		var Command, runSpy, parentCommnadRunResult = {};
 
 		beforeEach(function() {
-			SpawnCommand.prototype.run = sinon.spy();
+			SpawnCommand.prototype.run = sinon.spy(function() {
+				return parentCommnadRunResult;
+			});
 			runSpy = SpawnCommand.prototype.run;
 
 			Command = getCommandConstructor(app);
@@ -158,6 +160,13 @@ describe('ssh shell command', function() {
 
 		after(function() {
 			delete SpawnCommand.prototype.run;
+		});
+
+		it('should return result of run method of parent command', function() {
+			var command = new Command({});
+			var cmd = command.run({cmd: 'beep', args: ['1', '2']});
+
+			expect(cmd).equal(parentCommnadRunResult);
 		});
 
 		it('should pass callback to parent run method', function() {
