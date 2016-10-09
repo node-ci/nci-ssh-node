@@ -69,6 +69,16 @@ describe('ssh shell command', function() {
 			var command = new Command({shell: '/bin/bash'});
 			expect(command.shell).equal('/bin/bash');
 		});
+
+		it('should set shell cmd arg by default to -c', function() {
+			var command = new Command({});
+			expect(command.shellCmdArg).equal('-c');
+		});
+
+		it('should allow set another shell cmd arg', function() {
+			var command = new Command({shellCmdArg: '-m'});
+			expect(command.shellCmdArg).equal('-m');
+		});
 	});
 
 	describe('set params', function() {
@@ -256,7 +266,7 @@ describe('ssh shell command', function() {
 			expect(params.args[7]).equal('nci@192.168.0.1');
 		});
 
-		it('should run remote command in a shell', function() {
+		it('should run remote command in a shell using cmd arg', function() {
 			var command = new Command({});
 			command.run({cmd: 'beep', args: ['1', '2']});
 
