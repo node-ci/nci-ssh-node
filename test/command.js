@@ -323,6 +323,24 @@ describe('ssh shell command', function() {
 			expect(cmd).contain('beep  boop');
 		});
 
+		it('should optionally env vats before command', function() {
+			var command = new Command({});
+			command.run({
+				envVars: {
+					SOME_ENV: 'someValue',
+					OTHER_ENV: 'otherValue'
+				},
+				cmd: 'beep',
+				args: ['1', '2']
+			});
+
+			var params = runSpy.getCall(0).args[0],
+				cmd = params.args[8];
+			expect(cmd).match(new RegExp(
+				'-c \'SOME_ENV="someValue"; OTHER_ENV="otherValue"; beep "1" "2"'
+			));
+		});
+
 		it('should work in general', function() {
 			var command = new Command({});
 			command.host = '192.168.0.1';
