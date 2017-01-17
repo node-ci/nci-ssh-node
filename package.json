@@ -5,7 +5,7 @@
   "main": "lib/index.js",
   "scripts": {
     "lint": "jshint ./",
-    "test": "mocha --bail --reporter=spec"
+    "test": "mocha --bail --reporter=spec --timeout 10000"
   },
   "repository": {
     "type": "git",
