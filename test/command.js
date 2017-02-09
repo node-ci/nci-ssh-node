@@ -357,7 +357,10 @@ describe('ssh shell command', function() {
 			var params = runSpy.getCall(0).args[0],
 				cmd = params.args[8];
 			expect(cmd).match(new RegExp(
-				'-c \'SOME_ENV="someValue"; OTHER_ENV="otherValue"; beep "1" "2"'
+				'-c \'' +
+				'export SOME_ENV="someValue"; ' +
+				'export OTHER_ENV="otherValue"; ' +
+				'beep "1" "2"'
 			));
 		});
 
