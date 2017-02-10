@@ -1,6 +1,6 @@
 {
   "name": "nci-ssh-node",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "SSH node for nci",
   "main": "lib/index.js",
   "scripts": {
