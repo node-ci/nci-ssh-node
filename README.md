@@ -4,6 +4,7 @@ SSH node for [nci](https://github.com/node-ci/nci).
 
 This plugin allows to execute build on remote host via ssh.
 
+[![Build Status](https://travis-ci.org/node-ci/nci-ssh-node.svg?branch=master)](https://travis-ci.org/node-ci/nci-ssh-node)
 
 ## nci host requirements
 
